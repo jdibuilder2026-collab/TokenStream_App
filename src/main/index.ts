@@ -3,6 +3,8 @@ import { join } from 'path'
 import { setupIpcHandlers } from './ipc'
 import { killAllSessions } from './pty'
 
+let mainWindow: BrowserWindow | null = null
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
@@ -18,8 +20,6 @@ function createWindow(): BrowserWindow {
     },
   })
 
-  setupIpcHandlers(win)
-
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
@@ -31,11 +31,17 @@ function createWindow(): BrowserWindow {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  win.on('closed', () => {
+    mainWindow = null
+  })
+
+  mainWindow = win
   return win
 }
 
 app.whenReady().then(() => {
-  createWindow()
+  const win = createWindow()
+  setupIpcHandlers(win)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
